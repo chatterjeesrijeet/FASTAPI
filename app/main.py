@@ -12,12 +12,11 @@ from psycopg2.extras import RealDictCursor
 from sqlalchemy.orm import Session
 
 from .database import engine, get_db
-from . import models, schemas
+from . import models, schemas, utils
 
 models.Base.metadata.create_all(bind = engine)
 
 app = FastAPI()
-
 
 
 while True:
@@ -132,3 +131,21 @@ def update_post(id:int, post:schemas.PostBase,  db : Session = Depends(get_db)):
     db.commit()
 
     return post_query.first()
+
+
+@app.post("/users", status_code = status.HTTP_201_CREATED, response_model= schemas.UserOut)
+def register_user(user : schemas.UserCreate, db : Session = Depends(get_db)):
+
+    new_user = models.User(**user.dict())
+
+    hashed_password = utils.hash(new_user.password)
+    new_user.password = hashed_password
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return new_user
+
+    
+
